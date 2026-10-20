@@ -62,12 +62,24 @@
 ## 6. 安裝步驟
 
 ### 6-1 請 Claude 幫您裝（建議）
-先到 <https://github.com/anson4139/claude-code-mod-tutorial> 取得**整個資料夾**（按綠色「Code」→「Download ZIP」解壓縮，解壓後資料夾通常叫 `claude-code-mod-tutorial-main`；或用 `git clone`）。安裝時要複製的 `範本/session-board` 就在這份文件旁邊，只拿單一份 `.md` 不夠。
-
-打開 Claude Code，貼上這一句，把 `<資料夾位置>` 換成您放這個資料夾的完整路徑（例如 `C:\mod教學`）：
+打開 Claude Code，貼上這一句，下載、安裝都交給它：
 
 ```
-請讀 <資料夾位置>\session-board-設計規格與安裝.md，照第 6-2 節幫我安裝 session-board，裝完告訴我怎麼驗證。
+請到 https://github.com/anson4139/claude-code-mod-tutorial 下載整個資料夾（用 ZIP 或 git clone，放到暫存位置），讀裡面的 session-board-設計規格與安裝.md，照第 6-2 節安裝 session-board。寫入前先告訴我會改哪些檔；做到第 4 步就停，重開由我自己來。
+```
+
+- **Claude 會做**：下載、讀文件、先告訴您要改哪些檔，等您同意後才複製、換路徑、建資料夾、備份並修改 `settings.json`。
+- **Claude 不會做**：重開 Claude Code（第 5 步），要您自己完整關掉再開。
+- **請確認**：它講的檔案只有 `~/.claude/my-mods/session-board`、`~/.claude/session-board/`、`~/.claude/settings.json`（`env` 區塊）。多出別的就先不要同意。
+- mod 沒有沙盒，建議先請它把 `hooks/register.tsx` 的重點講給您聽，再同意。
+
+### 6-1b 不想讓 Claude 下載：自己取得檔案再請它裝
+先到 <https://github.com/anson4139/claude-code-mod-tutorial> 取得**整個資料夾**（按綠色「Code」→「Download ZIP」解壓縮，解壓後資料夾通常叫 `claude-code-mod-tutorial-main`；或用 `git clone`）。安裝時要複製的 `範本/session-board` 就在這份文件旁邊，只拿單一份 `.md` 不夠。
+
+再打開 Claude Code，貼上這一句，把 `<資料夾位置>` 換成您放這個資料夾的完整路徑（例如 `C:\mod教學`）：
+
+```
+請讀 <資料夾位置>\session-board-設計規格與安裝.md，照第 6-2 節幫我安裝 session-board，寫入前先告訴我會改哪些檔；做到第 4 步就停，重開由我自己來。
 ```
 
 ### 6-2 手動安裝（共 5 步）
@@ -125,6 +137,6 @@
 ## 9. 沒驗證的地方
 
 - 畫面在 **2026-10-16 於一台 Windows 電腦（Claude 桌面版）上由使用者確認**；其他電腦、終端機版、Mac 沒測過。
-- 第 6 節的安裝步驟：2026-10-20 在一台沒裝過的 Windows 桌面版電腦上跑過 6-2 的 1～5 步，完整重開後三排出現；6-3 中「說明」「先規劃」「空間」已確認，**「整理重點」按取消與說明的「收起」未驗證**。6-1 那句話用另一個全新的 Claude 對話照 GitHub 下載的 ZIP 預演過 6-2 的 1～4 步，檔案與設定都正確；重開後三排出現。登記後必須完整結束 Claude 程式再開，只關視窗不夠。
+- 第 6 節的安裝步驟：2026-10-20 在一台沒裝過的 Windows 桌面版電腦上跑過 6-2 的 1～5 步，完整重開後三排出現；6-3 中「說明」「先規劃」「空間」已確認，**「整理重點」按取消與說明的「收起」未驗證**。6-1b（自己下載 ZIP 再貼路徑）用另一個 Claude 對話預演過 6-2 的 1～4 步，檔案與設定都正確，重開後三排出現。6-1（只給 GitHub 連結、由 Claude 下載）：2026-10-21 在另一個沒有專案背景的新對話照做，Claude 下載後完成 6-2 的 1～4 步並停下，重開後三排與「說明」「先規劃」「整理重點」按鈕、「空間」都出現（依使用者回報，「整理重點」按取消仍未單獨驗證）。**Mac、終端機版、沒有 `git` 的電腦沒測過。**登記後必須完整結束 Claude 程式再開，只關視窗不夠。
 - 視窗更窄時第 3 排可能換行，沒有針對各種寬度測過。
 - 專案裡內建的檢查指令會對這個 mod 報一個格式錯誤（修改前就存在），不影響載入。
