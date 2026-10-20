@@ -71,10 +71,10 @@
 ```
 
 ### 6-2 手動安裝（共 5 步）
-1. **複製**：把 `範本/session-board` 整個資料夾複製到 `~/.claude/my-mods/session-board`（`~` 是使用者資料夾，如 `C:\Users\您的帳號`）。
+1. **複製**：把 `範本/session-board` 整個資料夾複製到 `~/.claude/my-mods/session-board`（`~` 是使用者資料夾，如 `C:\Users\您的帳號`）。`my-mods` 若不存在請先建立；複製完，`register.tsx` 的位置應是 `~/.claude/my-mods/session-board/hooks/register.tsx`，不要多一層 `session-board\session-board`。
 2. **換路徑**：打開 `~/.claude/my-mods/session-board/hooks/register.tsx`，第 6、7 行有兩處 `__你的CLAUDE資料夾__`，換成您的 `~/.claude` 完整位置，例如 `C:/Users/您的帳號/.claude`（用正斜線 `/`）。
 3. **建資料夾**：建立 `~/.claude/session-board/`（空的就好）。
-4. **登記**：先備份 `~/.claude/settings.json`，再在 `env` 區塊加兩項（已有就只補值；多個路徑時 Windows 用 `;`、Mac／Linux 用 `:` 分隔）：
+4. **登記**：先備份 `~/.claude/settings.json`，再在 `env` 區塊加兩項（沒有 `env` 就在最外層新增一個，和其他欄位並列、注意逗號，檔案要維持合法的 JSON；已有就只補值；多個路徑時 Windows 用 `;`、Mac／Linux 用 `:` 分隔）：
    ```json
    "env": {
      "CLAUDE_CODE_PLUGIN_DIRS": "C:\\Users\\您的帳號\\.claude\\my-mods\\session-board",
@@ -82,7 +82,7 @@
    }
    ```
    `CLAUDE_CODE_PLUGIN_DIR_WATCH` 是「改了程式自動重新載入」，不需要時可省略。
-5. **重開**：完整關掉 Claude Code 再開。
+5. **重開**：完整關掉 Claude Code 再開（這步要您自己做，Claude 無法替您重開）。桌面版只關視窗不夠，要從 Windows 右下角系統匣的 Claude 圖示按右鍵「結束」，或在工作管理員結束所有 Claude 程序。
 
 ### 6-3 驗證清單
 - [ ] 輸入框上方出現三排區域（額度、用量、按鈕）。
@@ -125,6 +125,6 @@
 ## 9. 沒驗證的地方
 
 - 畫面在 **2026-10-16 於一台 Windows 電腦（Claude 桌面版）上由使用者確認**；其他電腦、終端機版、Mac 沒測過。
-- 第 6 節的安裝步驟：2026-10-20 在一台沒裝過的 Windows 桌面版電腦上跑過 6-2 的 1～5 步，完整重開後三排出現；6-3 中「說明」「先規劃」「空間」已確認，**「整理重點」按取消與說明的「收起」未驗證，6-1 那句話也沒跑過**。登記後必須完整結束 Claude 程式再開，只關視窗不夠。
+- 第 6 節的安裝步驟：2026-10-20 在一台沒裝過的 Windows 桌面版電腦上跑過 6-2 的 1～5 步，完整重開後三排出現；6-3 中「說明」「先規劃」「空間」已確認，**「整理重點」按取消與說明的「收起」未驗證**。6-1 那句話用另一個全新的 Claude 對話照 GitHub 下載的 ZIP 預演過 6-2 的 1～4 步，檔案與設定都正確；**但預演後沒有重開，所以「那條路裝完是否出現三排」還沒驗證**。登記後必須完整結束 Claude 程式再開，只關視窗不夠。
 - 視窗更窄時第 3 排可能換行，沒有針對各種寬度測過。
 - 專案裡內建的檢查指令會對這個 mod 報一個格式錯誤（修改前就存在），不影響載入。

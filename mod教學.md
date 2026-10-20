@@ -182,10 +182,10 @@ Claude 用工具 ─▶ tool.call（每用一次就一次）
 
 ### 安裝工作台：用講的最簡單
 
-打開 Claude Code，貼上：
+先到 <https://github.com/anson4139/claude-code-mod-tutorial> 下載整個資料夾（Code → Download ZIP 並解壓縮）。打開 Claude Code，貼上這一句，把 `<資料夾位置>` 換成解壓後資料夾的完整路徑（例如 `C:\Users\您的帳號\Desktop\claude-code-mod-tutorial-main`）：
 
 ```
-請讀 session-board-設計規格與安裝.md，照第 6-2 節幫我安裝 session-board，裝完告訴我怎麼驗證。
+請讀 <資料夾位置>\session-board-設計規格與安裝.md，照第 6-2 節幫我安裝 session-board，裝完告訴我怎麼驗證。
 ```
 
 Claude 會照文件做：複製到 `~/.claude/my-mods/`、換掉程式裡兩處路徑、建立 `~/.claude/session-board/`、**先備份** `settings.json` 再登記位置。裝好後完整關掉桌面版再打開，照驗證清單點一輪：
