@@ -42,6 +42,25 @@
 
 完整步驟與常見問題請看 [session-board-設計規格與安裝.md](session-board-設計規格與安裝.md) 第 6 節。
 
+## 怎麼完整移除
+
+只在 Plugins 畫面按「移除」不會清乾淨。依作者在 Windows 桌面版的實測，還會留下市集登記、下載的複本，以及 mod 自己寫的狀態檔。請依序處理：
+
+1. 按輸入框旁的 **＋** → **Plugins**，移除 `session-board`。
+2. 在同一處移除市集 `claude-code-mod-tutorial`。它只是來源清單，不會載入 mod，但會一直留在清單裡。
+3. **完整關掉 Claude Code**（工作列右下角的圖示也要結束），再重新開啟。沒重開前，mod 仍在背景執行，會繼續寫狀態檔。
+4. 重開後檢查 `~/.claude`（Windows 是 `C:\Users\<您的帳號>\.claude`），刪掉殘留：
+
+| 位置 | 是什麼 |
+|---|---|
+| `~/.claude/session-board/` | mod 自己寫的狀態檔（每個對話一份，只在本機） |
+| `~/.claude/plugins/cache/claude-code-mod-tutorial/` | 安裝時下載的複本 |
+| `~/.claude/plugins/marketplaces/claude-code-mod-tutorial/` | 市集的下載檔 |
+
+**方法二（手動安裝）的移除：** 刪掉 `~/.claude/my-mods/session-board` 和 `~/.claude/session-board`，再到 `~/.claude/settings.json` 的 `env` 拿掉 `CLAUDE_CODE_PLUGIN_DIRS` 裡含 `session-board` 的那一段（若只剩它，整項移除）和 `CLAUDE_CODE_PLUGIN_DIR_WATCH`，然後完整重開。
+
+> 以上殘留是作者在 Windows 桌面版觀察到的行為；Mac、終端機版沒有測過，之後的 Claude Code 版本也可能改成自動清理。刪除前請先確認路徑。
+
 ## 裝之前請先知道（它會做什麼）
 
 - **讀寫本機檔案**：讀寫 `~/.claude/session-board/`（每個對話一份狀態檔），並讀 `~/.claude/projects/` 內的記憶檔來顯示「寫入記憶」（這顆按鈕只讀取，不會改記憶檔）。資料只在本機。
