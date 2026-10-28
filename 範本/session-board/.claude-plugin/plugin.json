@@ -1,6 +1,6 @@
 {
   "name": "session-board",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A band above the prompt showing what every session of this machine is doing, shared through status files.",
   "types": "./types/index.d.ts"
 }

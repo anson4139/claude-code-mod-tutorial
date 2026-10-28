@@ -1,7 +1,7 @@
 # mod 教學：跑在 Claude Code 裡面的程式
 
 > 給 SA、PG、PM 看的。用我們每天在用的「工作台」（session-board）當例子，把 mod 從檔案、事件到安全一次講清楚。
-> 更新：2026-10-16。依據：Claude Code 官方文件（見文末參考資料）與工作台實際程式 `hooks/register.tsx`。
+> 更新：2026-10-28。依據：Claude Code 官方文件（見文末參考資料）與工作台實際程式 `hooks/register.tsx`。
 
 ## 0. 一句話
 
@@ -128,9 +128,9 @@ Claude 用工具 ─▶ tool.call（每用一次就一次）
 | `$` 功能 | 工作台用來做什麼 |
 |---|---|
 | `$.ui.toast`／`$.ui.open`／`$.ui.resolve` | 跳出小提示、打開面板、取得畫面元件 |
-| `$.command.register`／`$.command.run` | 註冊斜線指令；「整理重點」就是透過它執行 `/compact` |
-| `$.prompt.fill` | 把字填進輸入框：「先規劃」「驗收提示」「設目標」都靠它 |
-| `$.model.complete` | 呼叫模型：「記憶」翻成白話、「產生建議」。**會算進額度** |
+| `$.command.register`／`$.command.run` | 註冊斜線指令；「壓縮空間」就是透過它執行 `/compact` |
+| `$.prompt.fill` | 把字填進輸入框：「先規劃」「設目標」都靠它 |
+| `$.model.complete` | 呼叫模型：「寫入記憶」翻成白話、「產生建議」。**會算進額度** |
 | `$.fs.read`／`list`／`write` | 讀寫 `~/.claude/session-board/` 的狀態檔和記憶檔 |
 | `$.store.get`／`set` | 記住「要不要顯示其他對話」這個設定 |
 | `$.clock.now`／`$.clock.every` | 每 2 秒更新一次畫面上的數字 |
@@ -149,7 +149,7 @@ Claude 用工具 ─▶ tool.call（每用一次就一次）
 
 哪裡看得到：終端機、桌面版 Code 分頁都會畫；VS Code 擴充套件 2.1.299 以上才會畫；`claude -p` 只跑程式、不畫畫面。
 
-### 工作台三排一覽（2026-10-16 版）
+### 工作台三排一覽（2026-10-28 版）
 
 | 排 | 內容 |
 |---|---|
@@ -160,41 +160,39 @@ Claude 用工具 ─▶ tool.call（每用一次就一次）
 | 按鈕 | 顏色 | 做什麼 | 點了會怎樣 |
 |---|---|---|---|
 | 工作台 | 藍 | 右側面板看狀態與下一步建議 | 只開面板，不改東西 |
-| 記憶 | 藍 | 把 AI 的筆記翻成白話 | 只讀取，用一次模型 |
-| 整理重點 | 琥珀（空間 ≥70% 變橘框） | 濃縮前面的對話，騰出空間 | **先問確認**；整理後無法還原 |
+| 寫入記憶 | 藍 | 把 AI 的筆記翻成白話 | 只讀取，不會改記憶檔，用一次模型 |
+| 壓縮空間 | 琥珀（空間 ≥70% 變橘框） | 濃縮前面的對話，騰出空間 | **先問確認**；整理後無法還原 |
 | 產生建議 | 紫 | 列出 2～3 個下一步 | 結果在工作台，點標題才填入輸入框 |
 | 先規劃 | 青綠 | 放入 `/plan` | 按 Enter 才生效：只規劃、不動手 |
-| 驗收提示 | 綠 | 放入「自己跑測試並貼出證據」 | 只填入輸入框，可改字再送出 |
 | 設目標 | 靛 | 放入 `/goal ` | 接著打完成條件再按 Enter；`/goal clear` 取消 |
-| 說明 | 灰 | 列出每顆按鈕的用法 | 只顯示 |
-| 退回（沒有按鈕） | — | 輸入框連按兩次 Esc，或 `/rewind` | 選一個時間點退回 |
+| 說明 | 灰 | 先解釋上方每個膠囊的意思，再列出每顆按鈕的用法 | 只顯示 |
 
-設計原則：會「做動作」的按鈕只把字放進輸入框，由您按 Enter 才執行（唯一例外是「整理重點」，它會先問）。要改按鈕文字或說明，改 `register.tsx` 開頭的 `GUIDE` 清單；改顏色，改 `BUTTON_COLOR`。
+設計原則：會「做動作」的按鈕只把字放進輸入框，由您按 Enter 才執行（唯一例外是「壓縮空間」，它會先問）。要改按鈕文字或說明，改 `register.tsx` 開頭的 `GUIDE` 清單與 `SHORT`（按鈕上實際顯示的名稱，兩處要一致）；改顏色，改 `BUTTON_COLOR`。每顆按鈕前面都有小圖示。
 
 ## 7. ⑥-1 載入與安裝
 
 | 方式 | 適合 | 說明 |
 |---|---|---|
-| 外掛市集 | 裝別人分享的 | `/plugin install 名稱@市集` |
+| **外掛市集（建議）** | 裝別人分享的；本專案已能這樣裝 | `/plugin install session-board --marketplace anson4139/claude-code-mod-tutorial`（桌面版：＋ → Plugins → Add marketplace）。**尚未在別台電腦實測** |
 | `claude --plugin-dir 資料夾` | 終端機單次測試 | 桌面版不能帶啟動參數 |
 | `~/.claude/dev-mods/<對話編號>/` | Claude 剛寫好的 | 只在那個對話載入，久了會被自動清掉 |
-| **`settings.json` 的 `CLAUDE_CODE_PLUGIN_DIRS`** | **我們的做法（桌面版長期使用）** | 搭配 `CLAUDE_CODE_PLUGIN_DIR_WATCH: "1"`，改了程式自動重新載入 |
+| **`settings.json` 的 `CLAUDE_CODE_PLUGIN_DIRS`** | 手動安裝的做法（桌面版長期使用） | 搭配 `CLAUDE_CODE_PLUGIN_DIR_WATCH: "1"`，改了程式自動重新載入 |
 
 ### 安裝工作台：用講的最簡單
 
 打開 Claude Code，貼上這一句，下載與安裝都交給它：
 
 ```
-請到 https://github.com/anson4139/claude-code-mod-tutorial 下載整個資料夾（用 ZIP 或 git clone，放到暫存位置），讀裡面的 session-board-設計規格與安裝.md，照第 6-2 節安裝 session-board。寫入前先告訴我會改哪些檔；做到第 4 步就停，重開由我自己來。
+請到 https://github.com/anson4139/claude-code-mod-tutorial 下載整個資料夾（用 ZIP 或 git clone，放到暫存位置），讀裡面的 session-board-設計規格與安裝.md，照第 6-2 節安裝 session-board。寫入前先告訴我會改哪些檔；做到第 3 步就停，重開由我自己來。
 ```
 
 不想讓 Claude 下載的話，可以自己下載 ZIP 解壓縮，再請它讀本機的文件，做法見 [session-board-設計規格與安裝.md](session-board-設計規格與安裝.md) 的 6-1b。
 
-Claude 會照文件做：複製到 `~/.claude/my-mods/`、換掉程式裡兩處路徑、建立 `~/.claude/session-board/`、**先備份** `settings.json` 再登記位置。裝好後完整關掉桌面版再打開，照驗證清單點一輪：
+Claude 會照文件做：複製到 `~/.claude/my-mods/`、建立 `~/.claude/session-board/`、**先備份** `settings.json` 再登記位置（程式會自己找 `~/.claude` 的位置，不用再換路徑）。裝好後完整關掉桌面版再打開，照驗證清單點一輪：
 
 - 輸入框上方出現三排。
 - 點「先規劃」：只填入 `/plan`，不會送出。
-- 點「整理重點」：先跳出確認，按取消什麼都不會發生。
+- 點「壓縮空間」：先跳出確認，按取消什麼都不會發生。
 
 手動步驟與完整規格見 [session-board-設計規格與安裝.md](session-board-設計規格與安裝.md)。
 

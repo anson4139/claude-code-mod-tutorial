@@ -1,0 +1,11 @@
+{
+  "name": "claude-code-mod-tutorial",
+  "owner": { "name": "Anson Chiang" },
+  "plugins": [
+    {
+      "name": "session-board",
+      "source": "./範本/session-board",
+      "description": "輸入框上方的工作台：額度、用量、對話狀態與常用按鈕"
+    }
+  ]
+}

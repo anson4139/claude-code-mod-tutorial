@@ -3,8 +3,23 @@ import type { Register } from 'claude-code'
 
 import type { Limit, Mem, Row, Suggestion } from '../types'
 
-const DIR = '__你的CLAUDE資料夾__/session-board'
-const PROJECTS = '__你的CLAUDE資料夾__/projects'
+// where the status files and the memory files live: found from the environment on first use,
+// so the plugin needs no path typed in by hand (CLAUDE_CONFIG_DIR, else <user folder>/.claude)
+let DIR = ''
+let PROJECTS = ''
+
+async function paths($: any) {
+  if (DIR !== '') {
+    return
+  }
+
+  const custom: string | undefined = await $.env.get('CLAUDE_CONFIG_DIR')
+  const user: string | undefined = (await $.env.get('USERPROFILE')) || (await $.env.get('HOME'))
+  const base = (custom || `${user ?? ''}/.claude`).replace(/\\/g, '/').replace(/\/+$/, '')
+
+  DIR = `${base}/session-board`
+  PROJECTS = `${base}/projects`
+}
 const MEM_PANE = 'memory-view'
 const BOARD_PANE = 'board'
 const BOARD_TITLE = '工作台'
@@ -40,14 +55,19 @@ const helpOpen = atom({ plugin: 'session-board', key: 'helpOpen' } as const, fal
 // one entry per button: what it does, when to use it, what a press does. `fill` buttons put text in the composer.
 // Plain words on purpose: this is the guide the person reads in the board.
 const GUIDE = [
+  { key: 'cap-5h', label: '5h（上方膠囊：5 小時額度）', what: '這 5 小時內，您的帳號已經用掉多少額度（%），後面的時間是「還要多久才重置」。', when: '覺得用得很快、怕被限速時看一眼；接近滿的時候先別丟大工作給 AI。', effect: '只是顯示，不用按；綠色安全、黃色注意、紅色快滿。重置後會從 0 重新算。' },
+  { key: 'cap-7d', label: '7d（上方膠囊：每週額度）', what: '這 7 天內，您的帳號已經用掉多少額度（%），後面是「離每週重置還有多久」。', when: '想知道這週還剩多少可以用、要不要把大工作排到下週時。', effect: '只是顯示，不用按；紫色代表還寬裕，超過 85% 會變紅。' },
+  { key: 'cap-ctx', label: '空間（上方膠囊：對話空間）', what: '這個對話的「記憶空間」用了多少 %，越滿 AI 越容易忘記前面講的話。', when: '覺得 AI 變慢、變笨時看一眼；接近 70% 就該考慮「壓縮空間」。', effect: '只是顯示，不用按；綠色安全、黃色注意、紅色快滿。' },
+  { key: 'cap-in', label: '↑ 輸入（上方膠囊）', what: '這個對話裡，您累計送給 AI 的內容量（單位 k = 千、M = 百萬，是計算用量的單位）。', when: '想知道這個對話已經餵給 AI 多少東西時。', effect: '只是顯示，不用按；數字只會越來越大。' },
+  { key: 'cap-out', label: '↓ 輸出（上方膠囊）', what: '這個對話裡，AI 累計回給您的內容量（單位同上）。', when: '想知道 AI 回得多不多、跟輸入比起來差多少時。', effect: '只是顯示，不用按。' },
+  { key: 'cap-cache', label: '疊層圖示（上方膠囊：快取）', what: '重複用到的內容，AI 會先記起來，下次不必重讀，這個數字就是被記起來、省下重讀的累計量。', when: '看到數字很大（例如幾 M）也不用擔心，那代表有在省用量。', effect: '只是顯示，不用按。' },
+  { key: 'cap-usd', label: '$ 金額（上方膠囊：花費）', what: '這個對話目前花了多少錢（美金）。', when: '想知道這個對話的成本時。只開一個對話時才顯示在這裡；開了多個對話，改在下方一起顯示合計。', effect: '只是顯示，不用按。' },
+  { key: 'cap-sessions', label: '對話 · 執行中（上方膠囊）', what: '目前一共有幾個對話，其中幾個正在回答您。', when: '同時開了好幾個對話，想知道有沒有哪個還在跑時。', effect: '只是顯示，不用按。' },
   { key: 'board', label: '工作台', what: '開啟右側面板，看這個對話的狀態與下一步建議。', when: '想知道現在進度、或不知道接下來該做什麼時。', effect: '只是打開面板，不會改任何東西。' },
-  { key: 'memory', label: '記憶', what: '把 AI 替自己記的筆記翻成白話給您看。', when: '想確認 AI 記住了您的哪些習慣和規定時。', effect: '只讀取，不會修改記憶。' },
-  { key: 'compact', label: '整理重點', what: '把前面的對話濃縮成摘要，騰出空間。', when: '上下文接近滿（按鈕變橘色）、AI 開始忘記前面講的事時。', effect: '點了會先問您確認；整理後細節被濃縮，無法還原。' },
+  { key: 'memory', label: '寫入記憶', what: '把 AI 替自己記的筆記翻成白話給您看。', when: '想確認 AI 記住了您的哪些習慣和規定時。', effect: '只讀取，不會修改記憶。' },
+  { key: 'compact', label: '壓縮空間', what: '把前面的對話濃縮成摘要，騰出空間。', when: '上下文接近滿（按鈕變橘色）、AI 開始忘記前面講的事時。', effect: '點了會先問您確認；整理後細節被濃縮，無法還原。' },
   { key: 'suggest', label: '產生建議', what: '請 AI 根據目前對話，列出 2～3 個下一步。', when: '做完一段、不確定下一步，或想讓 AI 幫您想選項時。', effect: '結果顯示在工作台，點標題才會填入輸入框，不會自動送出。' },
-  { key: 'context', label: '上下文（上方膠囊）', what: '膠囊顯示這個對話的空間用了多少 %，越滿 AI 越容易忘記前面講的話。', when: '覺得 AI 變慢、變笨時看一眼；接近 70% 就該考慮「整理重點」。', effect: '只是顯示，不用按；綠色安全、黃色注意、紅色快滿。' },
-  { key: 'rewind', label: '退回（沒有按鈕，連按兩次 Esc）', what: '把對話或程式碼退回到之前某一次送出訊息的時間點。', when: 'AI 改壞了、或方向錯了想重來時。', effect: '在輸入框連按兩次 Esc（或輸入 /rewind），出現選單讓您挑時間點。注意：只能退回 AI 用編輯工具改的檔案。' },
   { key: 'plan', label: '先規劃', fill: '/plan', what: '切到「只規劃、不動手」的模式，AI 只讀檔案和寫計畫。', when: '要改好幾個檔案，或您自己也還不確定怎麼做時。', effect: '放進輸入框，按 Enter 後生效；一句話能講完的小修改不需要。' },
-  { key: 'verify', label: '驗收提示', fill: '請自己跑測試或檢查，確認結果正確後，把執行的指令和輸出貼給我看，不要只說做好了。', what: '放入一段話，要求 AI 自己驗收並貼出證據。', when: 'AI 說「做好了」，但您不想自己再檢查一遍時。', effect: '只填入輸入框，您可以改字再送出。' },
   { key: 'goal', label: '設目標', fill: '/goal ', what: '設定「做到什麼程度才算完成」，沒達成 AI 會自己繼續做。', when: '您要離開一陣子，又希望回來時事情是真的做完的。', effect: '放進輸入框，您接著打條件（例如「全部測試都通過」）再按 Enter；輸入 /goal clear 可取消。' },
 ] as const
 const SHOW_OTHERS_KEY = 'showOthers'
@@ -55,7 +75,6 @@ const SHOW_OTHERS_KEY = 'showOthers'
 const COMPACT_HINT_PERCENT = 70
 // band layout: row 1 quotas and space, row 2 usage and sessions, row 3 buttons (the secondary ones drawn without icons)
 const ROW_QUOTA = ['five', 'seven', 'ctx']
-const SECONDARY = ['plan', 'verify', 'goal', 'help']
 // button colors by kind: look = blue, tidy up = amber / violet, tools = red / teal / green / indigo, help = grey
 const BUTTON_COLOR: Record<string, string> = {
   board: '#60a5fa',
@@ -63,12 +82,13 @@ const BUTTON_COLOR: Record<string, string> = {
   compact: '#fbbf24',
   suggest: '#c084fc',
   plan: '#2dd4bf',
-  verify: '#4ade80',
   goal: '#818cf8',
   help: '#94a3b8',
 }
 // the first button of each kind starts a new group, set apart by a wider gap
 const GROUP_START = ['compact', 'plan', 'help']
+// shorter chip labels so the whole row fits on one line; the guide keeps the full names
+const SHORT: Record<string, string> = { memory: '寫入記憶', compact: '壓縮空間', suggest: '產生建議', plan: '先規劃', goal: '設目標' }
 const COMPACT_INSTRUCTIONS =
   '保留：目標、已做的決定、還沒完成的事項、重要的檔案路徑、指令、數字與錯誤訊息。省略：嘗試錯誤的過程與重複的說明。'
 
@@ -323,11 +343,13 @@ async function save($: any, patch: Partial<Row>) {
     return
   }
 
+  await paths($)
   me = { ...me, ...patch, updatedAt: await $.clock.now() }
   await $.fs.write(fileOf(me.id), JSON.stringify(me))
 }
 
 async function refresh($: any) {
+  await paths($)
   const now: number = await $.clock.now()
   const entries = await $.fs.list(DIR).catch(() => [])
   const found: Row[] = []
@@ -379,7 +401,7 @@ async function runCompact($: any) {
     // $.session.compact is refused and a slash prompt must go through the command noun
     const result = await $.command.run({ command: 'compact', args: COMPACT_INSTRUCTIONS })
 
-    $.ui.toast(result?.text ? `整理重點：${String(result.text).slice(0, 80)}` : '已整理重點')
+    $.ui.toast(result?.text ? `壓縮空間：${String(result.text).slice(0, 80)}` : '已壓縮空間')
   } catch (error) {
     $.ui.toast(`整理失敗：${String(error)}`)
   } finally {
@@ -388,7 +410,7 @@ async function runCompact($: any) {
 }
 
 const MEM_PROMPT =
-  '背景：使用者在 Claude 桌面版裡，請 AI 助理做了一個叫 session-board 的外掛（mod），它在輸入框上方畫一條資訊列，顯示各個對話的狀態、花費與額度，列上有「✂ 整理重點」（壓縮對話內容）和「📖 記憶」兩個按鈕。「分割畫面」指桌面版把兩個對話左右並排。\n\n' +
+  '背景：使用者在 Claude 桌面版裡，請 AI 助理做了一個叫 session-board 的外掛（mod），它在輸入框上方畫一條資訊列，顯示各個對話的狀態、花費與額度，列上有「✂ 壓縮空間」（壓縮對話內容）和「📖 寫入記憶」兩個按鈕。「分割畫面」指桌面版把兩個對話左右並排。\n\n' +
   '下面是 AI 助理寫給自己看的一則記憶筆記。請用繁體中文（台灣用語），像對完全不懂技術的人說明，2 句話以內：這在記什麼（要點名是哪個按鈕或哪個部分）、使用者遇到時該怎麼做。不要用術語，不要加標題或前言。\n\n'
 
 // one translation per note, run only when the person asks: it costs a small model call each
@@ -397,6 +419,7 @@ async function loadMemory($: any) {
   await update($, memBusy, () => true)
 
   try {
+    await paths($)
     const cwd: string = await $.session.cwd()
     const dir = `${PROJECTS}/${cwd.replace(/[^A-Za-z0-9]/g, '-')}/memory`
     const entries: Array<{ name: string }> = await $.fs.list(dir).catch(() => [])
@@ -563,6 +586,7 @@ async function takeRequest($: any) {
     return
   }
 
+  await paths($)
   const fromFile = Number(await $.fs.read(requestOf(me.id)).catch(() => '0')) || 0
   const fromState = (await read($, suggestAsk)) || 0
   const request = Math.max(fromFile, fromState)
@@ -633,6 +657,7 @@ async function adoptLate($: any) {
     return
   }
 
+  await paths($)
   const disk = await $.fs
     .read(fileOf(me.id))
     .then((text: string) => JSON.parse(text) as Row)
@@ -675,6 +700,7 @@ async function tick($: any) {
 
 async function ensure($: any) {
   if (me === null) {
+    await paths($)
     const id: string = await $.session.id()
     const cwd: string = await $.session.cwd()
     const now: number = await $.clock.now()
@@ -1009,14 +1035,14 @@ export const register: Register = on => {
         </Box>
         )}
         {Svg ? (
-          <Box gap={1} flexWrap="wrap" alignItems="center">
+          <Box gap={0} flexWrap="wrap" alignItems="center">
             {[
               { key: 'board', icon: 'panel' as const, label: '工作台', isHot: false, onPress: () => openBoard($) },
-              { key: 'memory', icon: 'book' as const, label: '記憶', isHot: false, onPress: () => loadMemory($) },
+              { key: 'memory', icon: 'book' as const, label: SHORT.memory, isHot: false, onPress: () => loadMemory($) },
               {
                 key: 'compact',
                 icon: 'scissors' as const,
-                label: isCompacting ? '整理中…' : '整理重點',
+                label: isCompacting ? '整理中…' : SHORT.compact,
                 isHot: isCompacting || (self?.ctx ?? 0) >= COMPACT_HINT_PERCENT,
                 onPress: () => (isCompacting ? undefined : update($, confirming, value => !value)),
               },
@@ -1025,14 +1051,14 @@ export const register: Register = on => {
                 icon: 'sparkles' as const,
                 label: isSuggesting
                   ? `產生中 ${self?.suggestAt ? Math.max(0, Math.round((now - self.suggestAt) / 1000)) : 0}s`
-                  : '產生建議',
+                  : SHORT.suggest,
                 isHot: isSuggesting,
                 onPress: () => (isSuggesting ? undefined : void requestSuggest($)),
               },
               ...GUIDE.filter(g => 'fill' in g).map(g => ({
                 key: g.key,
-                icon: ({ plan: 'list', verify: 'check', goal: 'check' } as const)[g.key as 'plan'],
-                label: g.label,
+                icon: ({ plan: 'list', goal: 'check' } as const)[g.key as 'plan'],
+                label: SHORT[g.key] ?? g.label,
                 isHot: false,
                 onPress: () => void fillPrompt($, (g as { fill: string }).fill),
               })),
@@ -1050,23 +1076,21 @@ export const register: Register = on => {
               <Box
                 key={`chip-${b.key}`}
                 alignItems="center"
-                gap={1}
-                paddingX={1}
+                gap={0}
+                paddingX={0}
                 borderStyle="round"
                 borderColor={b.isHot ? '#d97706' : (BUTTON_COLOR[b.key] ?? '#64748b')}
-                marginLeft={GROUP_START.includes(b.key) ? 2 : 0}
+                marginLeft={GROUP_START.includes(b.key) ? 1 : 0}
                 hover={{ borderColor: HOVER_COLOR }}
               >
-                {SECONDARY.includes(b.key) ? null : (
-                  <Svg
-                    source={iconSvg(b.icon, { dark: BUTTON_COLOR[b.key] ?? '#cbd5e1', light: BUTTON_COLOR[b.key] ?? '#475569' })}
-                    alt={b.label}
-                    width={14}
-                    height={14}
-                  />
-                )}
-                <Button key={b.key} plain label={b.label} hover={{ bold: true }} onPress={b.onPress}>
-                  <Text color={BUTTON_COLOR[b.key]} bold={b.isHot}>{b.label}</Text>
+                <Svg
+                  source={iconSvg(b.icon, { dark: BUTTON_COLOR[b.key] ?? '#cbd5e1', light: BUTTON_COLOR[b.key] ?? '#475569' })}
+                  alt={b.label}
+                  width={12}
+                  height={12}
+                />
+                <Button key={b.key} plain hover={{ bold: true }} onPress={b.onPress}>
+                  <Text size="caption" color={BUTTON_COLOR[b.key]} bold={b.isHot}>{b.label}</Text>
                 </Button>
               </Box>
             ))}
@@ -1082,7 +1106,7 @@ export const register: Register = on => {
             <Text color="#fbbf24">{`合計 ${money(total)}`}</Text>
           ) : null}
           <Button key="board" plain dimColor label="🗂 工作台" onPress={() => openBoard($)} />
-          <Button key="memory" plain dimColor label="📖 記憶" onPress={() => loadMemory($)} />
+          <Button key="memory" plain dimColor label="📖 寫入記憶" onPress={() => loadMemory($)} />
           {isCompacting ? (
             <Text color="#fbbf24">✂ 整理中…</Text>
           ) : (
@@ -1090,7 +1114,7 @@ export const register: Register = on => {
               key="compact"
               plain
               dimColor={(self?.ctx ?? 0) < COMPACT_HINT_PERCENT}
-              label="✂ 整理重點"
+              label="✂ 壓縮空間"
               onPress={() => update($, confirming, value => !value)}
             />
           )}
@@ -1119,7 +1143,7 @@ export const register: Register = on => {
         {isConfirming && !isCompacting ? (
           <Box gap={1}>
             <Text color="#fbbf24">
-              {`✂ 要整理重點嗎？目前上下文 ${self?.ctx ?? '?'}%，整理後細節會被濃縮，無法還原。`}
+              {`✂ 要壓縮空間嗎？目前上下文 ${self?.ctx ?? '?'}%，整理後細節會被濃縮，無法還原。`}
             </Text>
             <Button key="yes" variant="primary" label="確定" onPress={() => runCompact($)} />
             <Button
